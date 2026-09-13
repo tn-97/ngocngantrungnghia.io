@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title> Ngọc Ngân & Trung Nghĩa</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      min-height: 100dvh; /* chiều cao thực tế hiển thị trên di động (bỏ qua thanh địa chỉ) */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      position: relative;
+
+      /* Cho phép cuộn dọc nếu nội dung cao hơn màn hình,
+         tránh trường hợp ảnh/nút bị CẮT MẤT mà không cuộn được */
+      overflow-x: hidden;
+      overflow-y: auto;
+
+      /* Màu nền dự phòng, khớp tông màu ảnh nền để không bị hở viền trắng
+         khi ảnh được scale theo kiểu "contain" (giữ trọn ảnh, không cắt xén) */
+      background-color: #7b1f1f;
+    }
+
+    /* hình nền mờ phía sau — tự động scale theo màn hình, giữ nguyên toàn bộ ảnh */
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('imagebia/background.jpg'); /* thay bằng ảnh nền của bạn */
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: blur(3px); /* độ mờ */
+      transform: scale(1.1); /* tránh viền mờ bị lộ */
+      z-index: -1;
+    }
+
+    /* =========================
+       KHUNG TẤM THIỆP - CÂN ĐỐI TRÊN MỌI MÀN HÌNH
+    ========================== */
+
+    .cover {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 1;
+
+      width: 100%;
+      padding: 0 12px;
+    }
+
+    .cover-frame {
+      /* Khung co theo đúng tỉ lệ hình chữ nhật thật của ảnh bìa.
+         Chiều rộng của khung được JS tính toán để vừa cả chiều rộng
+         lẫn chiều cao màn hình — ảnh bên trong luôn scale khít 100%
+         theo khung, không cắt xén, không méo, không bị hụt/lố khung. */
+      display: block;
+      margin: 0 auto;
+      width: min(92vw, 420px);
+      max-width: 100%;
+      line-height: 0;
+
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      border: 3px solid rgba(255, 255, 255, 0.85);
+
+      transition: width 0.2s ease, transform 0.6s ease, opacity 0.6s ease;
+    }
+
+    .cover-frame img {
+      display: block;
+
+      /* Ảnh luôn lấp đầy đúng 100% khung do JS tính sẵn theo tỉ lệ thật,
+         nên không bị hụt (letterbox) cũng không bị tràn/cắt khung */
+      width: 100%;
+      height: auto;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 22px;
+      padding: 14px 28px;
+      background: #c62828;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 20px;
+      font-weight: bold;
+      box-shadow: 0 0 15px rgba(198,40,40,0.8), 0 0 30px rgba(198,40,40,0.6);
+      animation: glow 1.5s infinite alternate, pulse 2s infinite;
+      transition: transform 0.3s ease, opacity 0.4s ease;
+    }
+
+    @keyframes glow {
+      from { box-shadow: 0 0 10px rgba(198,40,40,0.8); }
+      to   { box-shadow: 0 0 25px rgba(198,40,40,1); }
+    }
+
+    @keyframes pulse {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .btn:hover {
+      background: #b71c1c;
+      transform: scale(1.1);
+    }
+
+    .btn::before {
+      content: "👉";
+      font-size: 24px;
+      animation: point 1s infinite alternate;
+    }
+
+    @keyframes point {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-5px); }
+    }
+
+    @media (max-width: 480px) {
+      .btn {
+        font-size: 17px;
+        padding: 12px 22px;
+      }
+    }
+
+    /* =========================
+       HIỆU ỨNG CHUYỂN TRANG KHI MỞ THIỆP
+    ========================== */
+
+    .fade-out .cover-frame {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+
+    .fade-out .btn {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .page-transition {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+
+      background: radial-gradient(circle at center, #c62828 0%, #7b1f1f 100%);
+      color: #fdd835;
+
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+
+      transition: opacity 0.6s ease;
+    }
+
+    .page-transition.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .transition-heart {
+      font-size: 48px;
+      animation: heartBeat 0.9s ease-in-out infinite;
+    }
+
+    @keyframes heartBeat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.25); }
+    }
+
+    .transition-text {
+      font-family: "Georgia", serif;
+      font-size: 18px;
+      letter-spacing: 1px;
+    }
+
+    /* Tôn trọng người dùng tắt hiệu ứng chuyển động */
+    @media (prefers-reduced-motion: reduce) {
+      .cover-frame,
+      .btn,
+      .page-transition {
+        transition: none;
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="cover" id="cover">
+    <div class="cover-frame" id="coverFrame">
+      <img src="imagebia/biavuquy.jpg" alt="Ảnh bìa cưới" id="coverImg">
+    </div>
+    <a href="main.html" class="btn" id="openCard">Xem Thiệp Cưới</a>
+  </div>
+
+  <!-- LỚP HIỆU ỨNG CHUYỂN TRANG -->
+  <div class="page-transition" id="pageTransition">
+    <div class="transition-heart">💌</div>
+    <div class="transition-text">Đang mở thiệp mời...</div>
+  </div>
+
+  <script>
+    const btn = document.getElementById('openCard');
+    const cover = document.getElementById('cover');
+    const transitionOverlay = document.getElementById('pageTransition');
+    const coverFrame = document.getElementById('coverFrame');
+    const coverImg = document.getElementById('coverImg');
+
+    /* =========================================================
+       TÍNH KHUNG THEO ĐÚNG TỈ LỆ THẬT CỦA ẢNH BÌA
+       - Khung luôn scale vừa cả chiều rộng lẫn chiều cao màn hình
+       - Ảnh bên trong lấp đầy 100% khung (không hụt, không cắt, không méo)
+    ========================================================= */
+
+    function fitCoverFrame() {
+      if (!coverImg.naturalWidth || !coverImg.naturalHeight) return;
+
+      const ratio = coverImg.naturalHeight / coverImg.naturalWidth; // cao/rộng
+
+      // Không gian chừa cho nút "Xem Thiệp Cưới" + lề trên dưới
+      const RESERVED_FOR_BUTTON = 170;
+
+      const maxWidthByViewport = Math.min(window.innerWidth * 0.92, 420);
+      const maxHeightAllowed = Math.max(
+        window.innerHeight - RESERVED_FOR_BUTTON,
+        220
+      );
+      const maxWidthByHeight = maxHeightAllowed / ratio;
+
+      const finalWidth = Math.min(maxWidthByViewport, maxWidthByHeight);
+
+      coverFrame.style.width = finalWidth + 'px';
+    }
+
+    if (coverImg.complete) {
+      fitCoverFrame();
+    } else {
+      coverImg.addEventListener('load', fitCoverFrame);
+    }
+
+    window.addEventListener('resize', fitCoverFrame);
+    window.addEventListener('orientationchange', fitCoverFrame);
+
+    btn.addEventListener('click', function(event) {
+      event.preventDefault();
+
+      /* GHI NHỚ: người dùng vừa bấm (có "user gesture"),
+         báo cho trang thiệp chính biết để tự phát nhạc ngay khi mở */
+      sessionStorage.setItem('autoplayMusic', '1');
+
+      // Bước 1: thu nhỏ & mờ dần tấm thiệp bìa
+      cover.classList.add('fade-out');
+
+      // Bước 2: hiện lớp chuyển trang (màu đỏ + tim đập) ngay sau đó
+      setTimeout(() => {
+        transitionOverlay.classList.add('show');
+      }, 250);
+
+      // Bước 3: điều hướng sang thiệp chính khi hiệu ứng hoàn tất
+      setTimeout(() => {
+        window.location.href = btn.getAttribute('href');
+      }, 950);
+    });
+  </script>
+</body>
+</html>
